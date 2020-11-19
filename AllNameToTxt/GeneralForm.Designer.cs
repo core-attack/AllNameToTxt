@@ -46,7 +46,7 @@
             this.toolStripMenuItem14 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem18 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem15 = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem19 = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem21 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.myCurrentSave = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
@@ -148,9 +148,9 @@
             // listBoxName
             // 
             this.listBoxName.AllowDrop = true;
-            this.listBoxName.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.listBoxName.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.listBoxName.ContextMenuStrip = this.contextMenuStripName;
             this.listBoxName.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.listBoxName.FormattingEnabled = true;
@@ -164,11 +164,9 @@
             this.listBoxName.SelectedIndexChanged += new System.EventHandler(this.listBoxName_SelectedIndexChanged);
             this.listBoxName.DragDrop += new System.Windows.Forms.DragEventHandler(this.listBoxName_DragDrop);
             this.listBoxName.DragEnter += new System.Windows.Forms.DragEventHandler(this.listBoxName_DragEnter);
-            this.listBoxName.DragOver += new System.Windows.Forms.DragEventHandler(this.listBoxName_DragOver);
             this.listBoxName.KeyDown += new System.Windows.Forms.KeyEventHandler(this.listBoxName_KeyDown);
             this.listBoxName.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listBoxName_MouseDown);
             this.listBoxName.MouseUp += new System.Windows.Forms.MouseEventHandler(this.listBoxName_MouseUp);
-            this.listBoxName.Resize += new System.EventHandler(this.listBoxName_Resize);
             // 
             // contextMenuStripName
             // 
@@ -254,7 +252,7 @@
             this.toolStripMenuItem14,
             this.toolStripMenuItem18,
             this.toolStripMenuItem15,
-            this.toolStripMenuItem19,
+            this.toolStripMenuItem21,
             this.toolStripSeparator6,
             this.myCurrentSave,
             this.toolStripSeparator7,
@@ -264,7 +262,6 @@
             this.FileItem.Size = new System.Drawing.Size(48, 20);
             this.FileItem.Text = "Файл";
             this.FileItem.ToolTipText = "Ctrl+O";
-            this.FileItem.Click += new System.EventHandler(this.File_Click);
             // 
             // myOpen
             // 
@@ -290,8 +287,8 @@
             // toolStripMenuItem14
             // 
             this.toolStripMenuItem14.Name = "toolStripMenuItem14";
-            this.toolStripMenuItem14.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.C)));
+            this.toolStripMenuItem14.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.C)));
             this.toolStripMenuItem14.Size = new System.Drawing.Size(343, 22);
             this.toolStripMenuItem14.Text = "                            cue-файл (.cue)";
             this.toolStripMenuItem14.Click += new System.EventHandler(this.toolStripMenuItem14_Click);
@@ -299,8 +296,8 @@
             // toolStripMenuItem18
             // 
             this.toolStripMenuItem18.Name = "toolStripMenuItem18";
-            this.toolStripMenuItem18.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.M)));
+            this.toolStripMenuItem18.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.M)));
             this.toolStripMenuItem18.Size = new System.Drawing.Size(343, 22);
             this.toolStripMenuItem18.Text = "                            playlist (.m3u)";
             this.toolStripMenuItem18.Click += new System.EventHandler(this.toolStripMenuItem18_Click);
@@ -308,20 +305,20 @@
             // toolStripMenuItem15
             // 
             this.toolStripMenuItem15.Name = "toolStripMenuItem15";
-            this.toolStripMenuItem15.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.P)));
+            this.toolStripMenuItem15.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.P)));
             this.toolStripMenuItem15.Size = new System.Drawing.Size(343, 22);
             this.toolStripMenuItem15.Text = "                            promodj cue (.pue)";
             this.toolStripMenuItem15.Click += new System.EventHandler(this.toolStripMenuItem15_Click);
             // 
-            // toolStripMenuItem19
+            // toolStripMenuItem21
             // 
-            this.toolStripMenuItem19.Name = "toolStripMenuItem19";
-            this.toolStripMenuItem19.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.T)));
-            this.toolStripMenuItem19.Size = new System.Drawing.Size(343, 22);
-            this.toolStripMenuItem19.Text = "                            текстовый файл (.txt)";
-            this.toolStripMenuItem19.Click += new System.EventHandler(this.toolStripMenuItem19_Click);
+            this.toolStripMenuItem21.Name = "toolStripMenuItem21";
+            this.toolStripMenuItem21.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.T)));
+            this.toolStripMenuItem21.Size = new System.Drawing.Size(343, 22);
+            this.toolStripMenuItem21.Text = "                            текстовый файл (.txt)";
+            this.toolStripMenuItem21.Click += new System.EventHandler(this.toolStripMenuItem21_Click);
             // 
             // toolStripSeparator6
             // 
@@ -331,8 +328,8 @@
             // myCurrentSave
             // 
             this.myCurrentSave.Name = "myCurrentSave";
-            this.myCurrentSave.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.S)));
+            this.myCurrentSave.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
             this.myCurrentSave.Size = new System.Drawing.Size(343, 22);
             this.myCurrentSave.Text = "Сохранить в существующий файл";
             this.myCurrentSave.Click += new System.EventHandler(this.myCurrentSave_Click);
@@ -345,8 +342,8 @@
             // сохранитьВИсходникиToolStripMenuItem
             // 
             this.сохранитьВИсходникиToolStripMenuItem.Name = "сохранитьВИсходникиToolStripMenuItem";
-            this.сохранитьВИсходникиToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.S)));
+            this.сохранитьВИсходникиToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
             this.сохранитьВИсходникиToolStripMenuItem.Size = new System.Drawing.Size(343, 22);
             this.сохранитьВИсходникиToolStripMenuItem.Text = "Сохранить в исходники";
             this.сохранитьВИсходникиToolStripMenuItem.ToolTipText = "Заменяет измененными значениями названия входных файлов";
@@ -452,8 +449,8 @@
             // 
             this.begin.Name = "begin";
             this.begin.Size = new System.Drawing.Size(100, 23);
-            this.begin.Text = "#time";
-            this.begin.ToolTipText = "Тег #time добавляет время текущего пункта";
+            this.begin.Text = "#Time";
+            this.begin.ToolTipText = "Тег #Time добавляет время текущего пункта";
             // 
             // добавитьВКонецToolStripMenuItem
             // 
@@ -469,7 +466,7 @@
             this.end.Name = "end";
             this.end.Size = new System.Drawing.Size(100, 23);
             this.end.Text = ";";
-            this.end.ToolTipText = "Тег #time добавляет время текущего пункта";
+            this.end.ToolTipText = "Тег #Time добавляет время текущего пункта";
             // 
             // toolStripMenuItem1
             // 
@@ -619,8 +616,8 @@
             // toolStripMenuItem20
             // 
             this.toolStripMenuItem20.Name = "toolStripMenuItem20";
-            this.toolStripMenuItem20.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
-                        | System.Windows.Forms.Keys.C)));
+            this.toolStripMenuItem20.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.C)));
             this.toolStripMenuItem20.Size = new System.Drawing.Size(271, 22);
             this.toolStripMenuItem20.Text = "Копировать список";
             this.toolStripMenuItem20.Click += new System.EventHandler(this.toolStripMenuItem20_Click);
@@ -885,8 +882,8 @@
             // 
             // textBoxChange
             // 
-            this.textBoxChange.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.textBoxChange.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.textBoxChange.Location = new System.Drawing.Point(0, 319);
             this.textBoxChange.Name = "textBoxChange";
             this.textBoxChange.ReadOnly = true;
@@ -896,9 +893,9 @@
             // 
             // listBox1
             // 
-            this.listBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.listBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.listBox1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.listBox1.FormattingEnabled = true;
             this.listBox1.ItemHeight = 15;
@@ -1056,7 +1053,6 @@
             this.textBoxTitle.Name = "textBoxTitle";
             this.textBoxTitle.Size = new System.Drawing.Size(300, 23);
             this.textBoxTitle.TabIndex = 7;
-            this.textBoxTitle.Click += new System.EventHandler(this.textBoxPerformer_Click);
             this.textBoxTitle.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBoxPerformer_KeyDown);
             this.textBoxTitle.MouseLeave += new System.EventHandler(this.textBoxPerformer_MouseLeave);
             this.textBoxTitle.MouseHover += new System.EventHandler(this.textBoxPerformer_MouseHover);
@@ -1080,7 +1076,6 @@
             this.textBoxPerformer.Name = "textBoxPerformer";
             this.textBoxPerformer.Size = new System.Drawing.Size(131, 23);
             this.textBoxPerformer.TabIndex = 6;
-            this.textBoxPerformer.Click += new System.EventHandler(this.textBoxPerformer_Click);
             this.textBoxPerformer.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBoxPerformer_KeyDown);
             this.textBoxPerformer.MouseLeave += new System.EventHandler(this.textBoxPerformer_MouseLeave);
             this.textBoxPerformer.MouseHover += new System.EventHandler(this.textBoxPerformer_MouseHover);
@@ -1245,7 +1240,6 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem14;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem18;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem15;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem19;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ToolStripMenuItem пометитьКакToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem клёвыйToolStripMenuItem;
@@ -1257,6 +1251,7 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox textBoxGenre;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem21;
     }
 }
 

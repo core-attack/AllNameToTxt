@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Xml;
+using AllNameToTxt.Models;
+using AllNameToTxt.Models.Audition;
 using CueSharp;
 using Word = Microsoft.Office.Interop.Word; 
 
@@ -20,145 +21,148 @@ namespace AllNameToTxt
             InitializeComponent();
             setMask();
             setTimeFormat();
-            //MyselfOpen();
-        }
-        class myFileName
-        {
-            //текущее имя файла
-            public string currentFileName = "";
-            //исходное имя файла
-            public string oldFileName = "";
-            //исполнитель
-            public string performer = "";
-            //наименование
-            public string title = "";
-            //время начала
-            public string time = "";
-            //альбом
-            public string album = "";
-            //жанр
-            public string genres = "";
         }
 
-        string filename = "";
-        int mouseX = 0;
-        int mouseY = 0;
+        private string _filename = "";
+        private int _mouseX = 0;
+        private int _mouseY = 0;
         //для восстановления удаленного значения
-        List<string> oldDeleteValue = new List<string>();
+        private List<string> _oldDeleteValue = new List<string>();
         //для восстановления к первоначальному виду
-        List<string> defaultView = new List<string>();
+        private List<string> _defaultView = new List<string>();
         //индекс удаленного значения
-        List<int> oldDeleteValueIndex = new List<int>();
-        List<myFileName> listFileNames = new List<myFileName>();
-        string foldersName = "";
+        private List<int> _oldDeleteValueIndex = new List<int>();
+        private List<FileName> listFileNames = new List<FileName>();
+        private string _foldersName = "";
         //мой буфер
-        myFileName myClipboard = new myFileName();
+        private FileName _clipboard = new FileName();
 
         private void myOpen_Click(object sender, EventArgs e)
         {
             MyselfOpen();
         }
 
-        void MyselfOpen()
+        private void MyselfOpen()
         {
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.DefaultExt = ".txt";
             //не смещать cue файлы в списке со второй позиции! от этого зависит корректность выбора
-            dialog.Filter = "Cue files(*.cue)|*.cue|MPEG layer 3(*.mp3)|*.mp3|Текстовые файлы(*.txt)|*.txt";//"Текстовые файлы(*.txt)|*.txt|Playlist (*.m3u)|*.m3u|Cue (*.cue)|*.cue|Все файлы(*.*)|*.*";
-            filename = dialog.FileName;
+            dialog.Filter = "Cue files(*.cue)|*.cue|MPEG layer 3(*.mp3)|*.mp3|Текстовые файлы(*.txt)|*.txt|Audition Session(*.sesx)|*.sesx";//"Текстовые файлы(*.txt)|*.txt|Playlist (*.m3u)|*.m3u|Cue (*.cue)|*.cue|Все файлы(*.*)|*.*";
+            _filename = dialog.FileName;
             dialog.Multiselect = true;
             char[] sep = { '\\' };
+
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                //defaultView.Clear();
-                
-                if (dialog.FilterIndex == 2)
+                switch (dialog.FilterIndex)
                 {
-                    string[] s = dialog.FileNames[0].Split(sep);
-                    if (s.Length > 1)
-                        foldersName = s[s.Length - 2];
-                    foreach (String file in dialog.FileNames)
+                    case 1:
                     {
                         try
                         {
-                            myFileName mfn = new myFileName();
-                            //в старом имени хранится и расширение файла
-                            mfn.oldFileName = file;
-                            string sfn = shortName(file);
-                            if (toolsOformList.Checked)
+                            foreach (string file in dialog.FileNames)
                             {
-                                listBoxName.Items.Add(begin.Text + sfn + end.Text);
-                                mfn.currentFileName = begin.Text + sfn + end.Text;
+                                openCue(file);
                             }
-                            else
-                            {
-                                listBoxName.Items.Add(sfn);
-                                mfn.currentFileName = sfn;
-
-                            }
-                            if (defaultView.Count < 1000000)
-                                defaultView.Add(sfn);
-                            listFileNames.Add(mfn);
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(ex.Message + "\n" + ex.StackTrace);
-                            return;
+                            MessageBox.Show(ex.Message + "\n" + ex.StackTrace, "Ошибка открытия cue-файла");
                         }
                     }
-                }
-                else if (dialog.FilterIndex == 1)
-                {
-                    try
+                    break;
+                    case 2:
                     {
-                        //каждый файл загружать списком  с названием файла и временем у каждого пункта
-                        foreach (String file in dialog.FileNames)
+                        string[] s = dialog.FileNames[0].Split(sep);
+
+                        if (s.Length > 1)
+                            _foldersName = s[s.Length - 2];
+
+                        foreach (string file in dialog.FileNames)
                         {
-                            openCue(file);
+                            try
+                            {
+                                FileName mfn = new FileName();
+                                mfn.OldFileName = file;
+                                string sfn = shortName(file);
+
+                                if (toolsOformList.Checked)
+                                {
+                                    listBoxName.Items.Add(begin.Text + sfn + end.Text);
+                                    mfn.CurrentFileName = begin.Text + sfn + end.Text;
+                                }
+                                else
+                                {
+                                    listBoxName.Items.Add(sfn);
+                                    mfn.CurrentFileName = sfn;
+
+                                }
+
+                                if (_defaultView.Count < 1000000)
+                                    _defaultView.Add(sfn);
+
+                                listFileNames.Add(mfn);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(ex.Message + "\n" + ex.StackTrace);
+                                return;
+                            }
                         }
                     }
-                    catch (Exception ex)
+                    break;
+                    case 3:
                     {
-                        MessageBox.Show(ex.Message + "\n" + ex.StackTrace, "Ошибка открытия cue-файла");
-                    }
-                }
-                else if (dialog.FilterIndex == 3)
-                {
-                    try {
-                        //каждый файл загружать списком  с названием файла и временем у каждого пункта
-                        foreach (String file in dialog.FileNames)
+                        try
                         {
-                            openTxt(file);
-                        }    
+                            foreach (string file in dialog.FileNames)
+                            {
+                                openTxt(file);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message + "\n" + ex.StackTrace, "Ошибка открытия текстового");
+                        }
                     }
-                    catch (Exception ex)
+                    break;
+                    case 4:
                     {
-                        MessageBox.Show(ex.Message + "\n" + ex.StackTrace, "Ошибка открытия текстового");
+                        try
+                        {
+                            foreach (string file in dialog.FileNames)
+                            {
+                                openSesx(file);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message + "\n" + ex.StackTrace, "Ошибка открытия Audition Session ");
+                        }
                     }
+                    break;
                 }
             }
         }
 
-        bool defaultSave = true;
+        private bool _defaultSave = true;
         private void mySave_Click(object sender, EventArgs e)
         {
-            defaultSave = true;
+            _defaultSave = true;
             MySave();
         }
 
         private void myCurrentSave_Click(object sender, EventArgs e)
         {
-            defaultSave = false;
+            _defaultSave = false;
             mySaveCurrentTxt();
         }
 
-        void MySave()
+        private void MySave()
         {
             try
             {
-                //filename = Application.StartupPath + "\\mySavedFiles\\" + ".txt";
                 SaveFileDialog savedialog = saveFileDialog1;
-                //savedialog.FileName = "C:\\Users\\Николай\\Music\\Core Attack - ";
                 savedialog.Title = "Сохранить как ...";
                 savedialog.OverwritePrompt = true;
                 savedialog.CheckPathExists = true;
@@ -169,30 +173,25 @@ namespace AllNameToTxt
                 // If selected, save
                 if (savedialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Get the user-selected file name
                     string fileName = savedialog.FileName;
-                    //fileName = fileName.Remove(fileName.Length - 4);
-                    // Get the extension
-                    string strFilExtn =
-                        fileName.Remove(0, fileName.Length - 3);
-                    // Save file
+                    string strFilExtn = fileName.Remove(0, fileName.Length - 3);
+                    
                     switch (strFilExtn)
                     {
-                        case "txt":
+                        case Constants.Txt:
                             saveToTxt(fileName);
                             break;
-                        case "m3u":
+                        case Constants.M3u:
                             saveToM3u(fileName);
                             break;
-                        case "cue":
+                        case Constants.Cue:
                             saveToCue(fileName);
                             break;
-                        case "pue":
+                        case Constants.Pue:
                             saveToPromodjCue(fileName);
                             break;
-                        default:
-                            break;
                     }
+
                     textBoxChange.Text = "Данные сохранены в файл " + shortName(fileName);
                 }
             }
@@ -202,11 +201,11 @@ namespace AllNameToTxt
             }
         }
 
-        void mySaveCurrentTxt()
+        private void mySaveCurrentTxt()
         {
             try
             {
-                //filename = Application.StartupPath + "\\mySavedFiles\\" + ".txt";
+                //_filename = Application.StartupPath + "\\mySavedFiles\\" + ".txt";
                 SaveFileDialog savedialog = saveFileDialog1;
                 savedialog.Title = "Сохранить как ...";
                 savedialog.OverwritePrompt = false;
@@ -227,7 +226,7 @@ namespace AllNameToTxt
                     // Save file
                     switch (strFilExtn)
                     {
-                        case "txt":
+                        case Constants.Txt:
                             saveToCurrentTxt(fileName);
                             break;
                         default:
@@ -242,127 +241,200 @@ namespace AllNameToTxt
             }
         }
 
-        void saveToTxt(string fn)
+        private void saveToTxt(string fn)
         {
             string filename = shortName(fn);
-            //создание нового файла или перезапись существующего
-            StreamWriter outStream =
-              new StreamWriter(filename);
-            if (именоватьСписокtoolStripMenuItem.Checked)
+
+            using (var outStream = new StreamWriter(filename))
             {
-                outStream.WriteLine(listTitle.Text);
-                outStream.WriteLine("--------------------------------------------------------------------");
+                if (именоватьСписокtoolStripMenuItem.Checked)
+                {
+                    outStream.WriteLine(listTitle.Text);
+                    outStream.WriteLine("--------------------------------------------------------------------");
+                }
+
+                foreach (var t in listBoxName.Items)
+                    outStream.WriteLine(t);
+
+                outStream.Close();
             }
-            for (int i = 0; i < listBoxName.Items.Count; i++)
-                outStream.WriteLine(listBoxName.Items[i]);
-            outStream.Close();
         }
 
-        void saveToM3u(string fn)
+        private void saveToM3u(string fn)
         {
             string filename = shortName(fn);
-            //создание нового файла или перезапись существующего
-            StreamWriter outStream =
-              new StreamWriter(filename);
-            
-            for (int i = 0; i < listBoxName.Items.Count; i++)
-                outStream.WriteLine(listBoxName.Items[i]);
-            outStream.Close();
+
+            using (var outStream = new StreamWriter(filename))
+            {
+                foreach (var t in listBoxName.Items)
+                    outStream.WriteLine(t);
+
+                outStream.Close();
+            }
         }
 
-        void openCue(string filePath)
+        private void openCue(string filePath)
         {
             CueSheet cue = new CueSheet(filePath);
             listTitle.Text = cue.Performer + " - " + getTitle(cue.Title);
             listTitle.ToolTipText = listTitle.Text;
-            for (int i = 0; i < cue.Tracks.Length; i++ )
-            {
-                string time = buildTime(cue.Tracks[i].Indices[0].Minutes.ToString(), cue.Tracks[i].Indices[0].Seconds.ToString(), cue.Tracks[i].Indices[0].Frames.ToString());
-                if (leftTime.Checked)
-                    listBoxName.Items.Add(time + " " + cue.Tracks[i].Performer + " - " + cue.Tracks[i].Title);
-                else
-                    listBoxName.Items.Add(cue.Tracks[i].Performer + " - " + cue.Tracks[i].Title + " " + time);
-                myFileName myfn = new myFileName();
-                myfn.currentFileName = "";
-                myfn.oldFileName = "";
-                myfn.performer = cue.Tracks[i].Performer;
-                myfn.title = cue.Tracks[i].Title;
-                myfn.time = time;
-                listFileNames.Add(myfn);
 
+            foreach (var t in cue.Tracks)
+            {
+                string time = buildTime(t.Indices[0].Minutes.ToString(), t.Indices[0].Seconds.ToString(), t.Indices[0].Frames.ToString());
+                
+                if (leftTime.Checked)
+                    listBoxName.Items.Add(time + " " + t.Performer + " - " + t.Title);
+                else
+                    listBoxName.Items.Add(t.Performer + " - " + t.Title + " " + time);
+                
+                FileName myfn = new FileName();
+                myfn.CurrentFileName = "";
+                myfn.OldFileName = "";
+                myfn.Performer = t.Performer;
+                myfn.Title = t.Title;
+                myfn.Time = time;
+                listFileNames.Add(myfn);
             }
+
             listBoxName.Items.Add("");
-            myFileName mf = new myFileName();
-            mf.currentFileName = "";
-            mf.oldFileName = "";
-            mf.performer = "";
-            mf.title = "";
-            mf.time = "";
+            FileName mf = new FileName();
+            mf.CurrentFileName = "";
+            mf.OldFileName = "";
+            mf.Performer = "";
+            mf.Title = "";
+            mf.Time = "";
             listFileNames.Add(mf);
         }
 
-        void openTxt(string file)
+        private void openTxt(string file)
         {
             string[] arr = File.ReadAllLines(file, Encoding.Default);
             listBoxName.Items.Add(file);
+
             foreach (string s in arr)
             {
                 listBoxName.Items.Add(s);
-                myFileName myfn = new myFileName();
-                myfn.currentFileName = "";
-                myfn.oldFileName = "";
-                myfn.performer = getPerformer(s);
-                myfn.title = getTitle(s);
-                myfn.time = "00:00:00";
+                FileName myfn = new FileName();
+                myfn.CurrentFileName = "";
+                myfn.OldFileName = "";
+                myfn.Performer = getPerformer(s);
+                myfn.Title = getTitle(s);
+                myfn.Time = "00:00:00";
                 listFileNames.Add(myfn);
             }
         }
 
-        string buildTime(string m, string s, string ms)
+        void openSesx(string file)
+        {
+            var document = new XmlDocument();
+
+            document.Load(file);
+
+            var nodes = document.SelectNodes($"sesx/session/tracks/audioTrack/audioClip");
+
+            if (nodes == null)
+            {
+                return;
+            }
+
+            var clips = new List<AudioClip>();
+
+            foreach (XmlNode node in nodes)
+            {
+                var clip = new AudioClip();
+
+                var nameAttr = node.Attributes?.GetNamedItem("name");
+                var startAttr = node.Attributes?.GetNamedItem("startPoint");
+                var endAttr = node.Attributes?.GetNamedItem("endPoint");
+
+                if (nameAttr != null)
+                {
+                    clip.Name = nameAttr.Value;
+                }
+
+                if (startAttr != null)
+                {
+                    long.TryParse(startAttr.Value, out var start);
+                    clip.Start = start;
+
+                }
+
+                if (endAttr != null)
+                {
+                    long.TryParse(endAttr.Value, out var end);
+                    clip.End = end;
+                }
+
+                clips.Add(clip);
+            }
+
+            var ordered = clips.OrderBy(x => x.Start);
+
+            foreach (var x in ordered)
+            {
+                listBoxName.Items.Add(x.Name);
+
+                FileName myfn = new FileName();
+                myfn.CurrentFileName = "";
+                myfn.OldFileName = "";
+                myfn.Performer = getPerformer(x.Name);
+                myfn.Title = getTitle(x.Name);
+                myfn.Time = "00:00:00";
+                listFileNames.Add(myfn);
+            }
+        }
+
+        private string buildTime(string m, string s, string ms)
         {
             string min = m;
             string sec = s;
             string msec = ms;
+
             if (m.Length == 1)
                 min = "0" + min;
+
             if (s.Length == 1)
                 sec = "0" + sec;
+
             if (ms.Length == 1)
                 msec = "0" + msec;
+
             return min + ":" + sec + ":" + msec;
         }
 
-        //помещает время в конец или в начало строки
-        void rebiuldTime()
+        /// <summary>
+        /// помещает время в конец или в начало строки
+        /// </summary>
+        private void rebiuldTime()
         {
             if (leftTime.Checked)
                 for (int i = 0; i < listBoxName.Items.Count; i++)
                 {
-                    if (listFileNames[i].time != "")
-                        listBoxName.Items[i] = listFileNames[i].time + " " + listFileNames[i].performer + " - " + listFileNames[i].title;
+                    if (listFileNames[i].Time != "")
+                        listBoxName.Items[i] = listFileNames[i].Time + " " + listFileNames[i].Performer + " - " + listFileNames[i].Title;
                 }
             else
                 for (int i = 0; i < listBoxName.Items.Count; i++)
                 {
-                    if (listFileNames[i].time != "")
-                        listBoxName.Items[i] = listFileNames[i].performer + " - " + listFileNames[i].title + " " + listFileNames[i].time;
+                    if (listFileNames[i].Time != "")
+                        listBoxName.Items[i] = listFileNames[i].Performer + " - " + listFileNames[i].Title + " " + listFileNames[i].Time;
                 }
         }
 
-        void saveToCue(string cuename)
+        private void saveToCue(string cuename)
         {
             try
             {
                 OpenFileDialog od = openFileDialog1;
                 od.Title = "Выберите файл, для которого следует создать cue-файл";
                 od.FileName = "noname.mp3";
+
                 if (od.ShowDialog() == DialogResult.OK)
                 {
                     //сам cue-файл
-                    StreamWriter sr = new StreamWriter(cuename);
-                    sr.Close();
-                    //
-                    CueSharp.CueSheet cue = new CueSheet(cuename);
+                    CueSheet cue = new CueSheet(cuename);
+
                     if (!выключитьАвтоматическоеЗаполнениеToolStripMenuItem.Checked)
                     {
                         cue.Performer = toolStripTextBoxPerformer.Text;
@@ -377,26 +449,28 @@ namespace AllNameToTxt
                         cue.Performer = getPerformer(shortName(od.FileName));
                         cue.Title = getTitle(shortName(od.FileName));
                     }
+
                     cue.Songwriter = toolStripTextBoxPerformer.Text;
-                    CueSharp.Track trk = new Track(1, DataType.AUDIO);
+                    Track trk = new Track(1, DataType.AUDIO);
                     trk.DataFile = new AudioFile(shortName(od.FileName), FileType.MP3);
-                    trk.Title = "filename";
-                    trk.Performer = "filename";
+                    trk.Title = "_filename";
+                    trk.Performer = "_filename";
                     trk.AddIndex(1, 0, 0, 0);
                     cue.AddTrack(trk);
+
                     for (int i = 0; i < listFileNames.Count; i++)
                     {
                         FileInfo fi = new FileInfo(cuename);
-                        if (listFileNames[i].currentFileName != "")
+                        if (listFileNames[i].CurrentFileName != "")
                         {
                             //перед тем, как создать cue-файл нужно сохранить в исходники измененные названия файлов
-                            fi = new FileInfo(listFileNames[i].currentFileName);
+                            fi = new FileInfo(listFileNames[i].CurrentFileName);
                         }
-                        if (!fi.Exists && listFileNames[i].oldFileName != "")
+                        if (!fi.Exists && listFileNames[i].OldFileName != "")
                         {
-                            fi = new FileInfo(listFileNames[i].oldFileName);
+                            fi = new FileInfo(listFileNames[i].OldFileName);
                         }
-                        string time = listFileNames[i].time;
+                        string time = listFileNames[i].Time;
                         char[] c = {':'};
                         string[] subs = time.Split(c);
                         int min = 0;
@@ -409,24 +483,30 @@ namespace AllNameToTxt
                         if (subs.Length > 2 && subs[2] != "")
                             fra = Convert.ToInt32(subs[2]);
                         //позиция и время начала
-                        CueSharp.Index index = new CueSharp.Index(1, min, sec, fra); 
+                        Index index = new Index(1, min, sec, fra); 
                         //трек
-                        CueSharp.Track track = new Track(i + 1, DataType.AUDIO);
-                        track.Performer = listFileNames[i].performer;
-                        track.Title = listFileNames[i].title;
+                        Track track = new Track(i + 1, DataType.AUDIO);
+                        track.Performer = listFileNames[i].Performer;
+                        track.Title = listFileNames[i].Title;
                         track.AddIndex(1, min, sec, fra);
                         if (track.Performer != "" && track.Title != "")
                             cue.AddTrack(track);
                     }
+
                     cue.SaveCue(cuename);
-                    //не могу разобраться с тем, как добавить только ссылку на файл mp3, без добавления performer и title
+                    //не могу разобраться с тем, как добавить только ссылку на файл mp3, без добавления Performer и Title
                     //поэтому просто удаляю лишние три  строки и всё работает
                     string line = "";
-                    StreamReader lines = new StreamReader(cuename);
-                    line = lines.ReadToEnd();
-                    lines.Close();
+
+                    using (var lines = new StreamReader(cuename))
+                    {
+                        line = lines.ReadToEnd();
+                        lines.Close();
+                    }
+
                     char[] sep = { '\n' };
                     string[] cueLines = line.Split(sep);
+
                     for (int j = 0; j < cueLines.Length; j++)
                     {
                         if (cueLines[j].Length > 1)
@@ -434,13 +514,18 @@ namespace AllNameToTxt
                         if (j == 4 || j == 5 || j == 6 || j == 7)
                             cueLines[j] = "";
                     }
-                    StreamWriter deletedLines = new StreamWriter(cuename);
-                    for (int j = 0; j < cueLines.Length; j++)
+
+                    using (var deletedLines = new StreamWriter(cuename))
                     {
-                        if (cueLines[j] != "")
-                            deletedLines.WriteLine(cueLines[j]);
+
+                        foreach (var t in cueLines)
+                        {
+                            if (t != "")
+                                deletedLines.WriteLine(t);
+                        }
+
+                        deletedLines.Close();
                     }
-                    deletedLines.Close();
                 }
             }
             catch (Exception e)
@@ -449,31 +534,33 @@ namespace AllNameToTxt
             }
         }
 
-        void saveToPromodjCue(string cuename)
+        private void saveToPromodjCue(string cueName)
         {
             try
             {
                 
                 List<string> list = new List<string>();
+
                 for (int i = 0; i < listFileNames.Count; i++)
                 {
                     char[] c = { ':' };
-                    string[] subs = listFileNames[i].time.Split(c);
+                    string[] subs = listFileNames[i].Time.Split(c);
                     if (subs.Length > 2)
                     {
                         string min = subs[0];
                         string sec = subs[1];
-                        list.Add(min + ":" + sec + " " + listFileNames[i].performer + " - " + listFileNames[i].title);
+                        list.Add(min + ":" + sec + " " + listFileNames[i].Performer + " - " + listFileNames[i].Title);
                     }
                     else
                     {
                         if (i != 0)
-                            list.Add("00:00" + " " + listFileNames[i].performer + " - " + listFileNames[i].title);
+                            list.Add("00:00" + " " + listFileNames[i].Performer + " - " + listFileNames[i].Title);
                         else
-                            list.Add(listFileNames[i].performer + " - " + listFileNames[i].title);
+                            list.Add(listFileNames[i].Performer + " - " + listFileNames[i].Title);
                     }   
                 }
-                File.WriteAllLines(cuename, list ,Encoding.UTF8);
+
+                File.WriteAllLines(cueName, list, Encoding.UTF8);
             }
             catch (Exception e)
             {
@@ -481,87 +568,104 @@ namespace AllNameToTxt
             }
         }
 
-        int getMin(string s)
+        private int getMin(string s)
         {
             char[] c = {':'};
             string[] subs = s.Split(c);
+
             if (subs[0][0] == '0')
                 return Convert.ToInt32(subs[0][1]);
             else
                 return Convert.ToInt32(subs[0]);
         }
 
-        int getSec(string s)
+        private int getSec(string s)
         {
             char[] c = { ':' };
             string[] subs = s.Split(c);
+
             if (subs[1][0] == '0')
                 return Convert.ToInt32(subs[1][1]);
             else
                 return Convert.ToInt32(subs[1]);
         }
 
-        int getFrames(string s)
+        private int getFrames(string s)
         {
             char[] c = { ':' };
             string[] subs = s.Split(c);
+
             if (subs[2][0] == '0')
                 return Convert.ToInt32(subs[2][1]);
             else
                 return Convert.ToInt32(subs[2]);
         }
 
-        string getPerformer(string s)
+        private string getPerformer(string s)
         {
             string str = "";
             int i = -1;
+
             if (s.IndexOf("–") != -1)
                 s = s.Replace("–", "-");
+
             if (s.IndexOf("-") != -1)
                 i = s.IndexOf("-");
+
             if (i != -1)
                 str = s.Substring(0, i);
+
             if (isNumerated)
                 str = str.Remove(0, numMask.SelectedIndex + 2);
+
             return str;
         }
 
-        string getTitle(string s)
+        private string getTitle(string s)
         {
             string str = "";
             int i = -1;
+
             if (s.IndexOf("–") != -1)
                 s = s.Replace("–", "-");
+
             if (s.IndexOf("-") != -1)
                 i = s.IndexOf("-");
+
             if (i != -1)
                 str = s.Substring(i + 1);
             else
                 str = s;
+
             string mp3 = str.ToLower();
+
             if (mp3.IndexOf(".mp3") != -1)
                 str = str.Remove(mp3.IndexOf(".mp3"));
+
             return str.TrimStart();
         }
 
-        void saveToCurrentTxt(string fn)
+        private void saveToCurrentTxt(string fn)
         {
             try
             {
                 string filename = shortName(fn);
                 //для дописывания в конец файла
                 FileInfo fi = new FileInfo(filename);
-                //создание нового файла или перезапись существующего
-                StreamWriter outStream = fi.AppendText();
-                outStream.WriteLine();
-                if (именоватьСписокtoolStripMenuItem.Checked)
+
+                using (var outStream = fi.AppendText())
                 {
-                    outStream.WriteLine(listTitle.Text);
-                    outStream.WriteLine("--------------------------------------------------------------------");
+                    outStream.WriteLine();
+                    if (именоватьСписокtoolStripMenuItem.Checked)
+                    {
+                        outStream.WriteLine(listTitle.Text);
+                        outStream.WriteLine("--------------------------------------------------------------------");
+                    }
+
+                    for (int i = 0; i < listBoxName.Items.Count; i++)
+                        outStream.WriteLine(listBoxName.Items[i]);
+                    outStream.Close();
                 }
-                for (int i = 0; i < listBoxName.Items.Count; i++)
-                    outStream.WriteLine(listBoxName.Items[i]);
-                outStream.Close();
             }
             catch (Exception e)
             {
@@ -569,7 +673,10 @@ namespace AllNameToTxt
             }
 
         }
-        // сохраняет только имя файла
+
+        /// <summary>
+        /// сохраняет только имя файла
+        /// </summary>
         string shortName(string file)
         {
             char[] sep = { '\\' };
@@ -585,13 +692,11 @@ namespace AllNameToTxt
                 {
                     if (listBoxName.SelectedIndex != -1)
                     {
-                        //Clipboard.SetText(listBoxName.Items[listBoxName.SelectedIndex].ToString(), TextDataFormat.Text);
-                        textBoxChange.Text = "" + listBoxName.Items[listBoxName.SelectedIndex].ToString();
+                        textBoxChange.Text = "" + listBoxName.Items[listBoxName.SelectedIndex];
                     }
                     else
                     {
-                        //Clipboard.SetText(listBoxName.Items[listBoxName.Items.Count - 1].ToString(), TextDataFormat.Text);
-                        textBoxChange.Text = "" + listBoxName.Items[listBoxName.Items.Count - 1].ToString();
+                        textBoxChange.Text = "" + listBoxName.Items[listBoxName.Items.Count - 1];
                     }
                 }
             }
@@ -605,9 +710,9 @@ namespace AllNameToTxt
         {
             MyselfOpen();
             listCleared = false;
-            specCharsDeleted = false;
+            _specCharsDeleted = false;
             isNumerated = false;
-            isRemove = false;
+            _isRemove = false;
         }
 
         private void сохранитьВtxtToolStripMenuItem_Click(object sender, EventArgs e)
@@ -621,23 +726,28 @@ namespace AllNameToTxt
             addSubs();
         }
 
-        //добавляет в начало и конец пункта списка подстроки
+        /// <summary>
+        /// добавляет в начало и конец пункта списка подстроки
+        /// </summary>
         void addSubs()
         {
             autosave();
             string s = "";
             string beg = begin.Text;
             string en = end.Text;
+
             for (int i = 0; i < listBoxName.Items.Count; i++)
             {
                 s = listBoxName.Items[i].ToString();
-                if (begin.Text.IndexOf("#time") != -1)
+
+                if (begin.Text.IndexOf("#Time") != -1)
                 {
-                    begin.Text = addTime(i) + " " + begin.Text.Replace("#time", "");
+                    begin.Text = addTime(i) + " " + begin.Text.Replace("#Time", "");
                 }
-                if (end.Text.IndexOf("#time") != -1)
+
+                if (end.Text.IndexOf("#Time") != -1)
                 {
-                    end.Text = end.Text.Replace("#time", "") + " " + addTime(i);
+                    end.Text = end.Text.Replace("#Time", "") + " " + addTime(i);
                 }
                 s = begin.Text + s + end.Text;
                 begin.Text = beg;
@@ -648,21 +758,22 @@ namespace AllNameToTxt
             isRepeatAdd = true;
         }
 
-        string addTime(int itemIndex)
+        private string addTime(int itemIndex)
         {
             string time = "";
+
             switch (timeFormat.Text)
             {
                 case "mm:ss": {
-                    if (listFileNames[itemIndex].time != "")
-                        time = listFileNames[itemIndex].time.Remove(listFileNames[itemIndex].time.Length - 3, listFileNames[itemIndex].time.Length);
+                    if (listFileNames[itemIndex].Time != "")
+                        time = listFileNames[itemIndex].Time.Remove(listFileNames[itemIndex].Time.Length - 3, listFileNames[itemIndex].Time.Length);
                     else
                         time = "00:00";
                 }
                     break;
                 case "mm:ss:msms": {
-                    if (listFileNames[itemIndex].time != "")
-                        time = listFileNames[itemIndex].time;
+                    if (listFileNames[itemIndex].Time != "")
+                        time = listFileNames[itemIndex].Time;
                     else
                         time = "00:00:00";
                 }
@@ -670,6 +781,7 @@ namespace AllNameToTxt
                 default: time = "00:00:01";
                     break;
             }
+
             return time;
         }
 
@@ -679,7 +791,7 @@ namespace AllNameToTxt
         }
 
         //заменяет подчеркивание на пробел во всех строках списка
-        void replace_ToSpase()
+        private void replace_ToSpase()
         {
             autosave();
 
@@ -690,7 +802,7 @@ namespace AllNameToTxt
                 s = s.Replace("_", " ");
                 listBoxName.Items[i] = s;
             }
-            isRemove = true;
+            _isRemove = true;
         }
 
         private void listBoxName_KeyDown(object sender, KeyEventArgs e)
@@ -709,19 +821,18 @@ namespace AllNameToTxt
             abort();
         }
 
-        //отмена действия
-        void abort()
+        private void abort()
         {
             try
             {
 
-                if (!listCleared && !specCharsDeleted && !isNumerated && !isRemove && !foldersNameInsert && !isDeleteNumeration && !isRepeatAdd)
+                if (!listCleared && !_specCharsDeleted && !isNumerated && !_isRemove && !foldersNameInsert && !isDeleteNumeration && !isRepeatAdd)
                 {
-                    if ((oldDeleteValueIndex.Count != 0 && oldDeleteValue.Count != 0))
+                    if ((_oldDeleteValueIndex.Count != 0 && _oldDeleteValue.Count != 0))
                     {
-                        listBoxName.Items.Insert(oldDeleteValueIndex[oldDeleteValueIndex.Count - 1], oldDeleteValue[oldDeleteValue.Count - 1]);
-                        oldDeleteValueIndex.RemoveAt(oldDeleteValueIndex.Count - 1);
-                        oldDeleteValue.RemoveAt(oldDeleteValue.Count - 1);
+                        listBoxName.Items.Insert(_oldDeleteValueIndex[_oldDeleteValueIndex.Count - 1], _oldDeleteValue[_oldDeleteValue.Count - 1]);
+                        _oldDeleteValueIndex.RemoveAt(_oldDeleteValueIndex.Count - 1);
+                        _oldDeleteValue.RemoveAt(_oldDeleteValue.Count - 1);
                     }
                 }
                 else if (foldersNameInsert)
@@ -734,19 +845,19 @@ namespace AllNameToTxt
                 {
                     listBoxName.Items.Clear();
                     //listFileNames.Clear();
-                    while (oldDeleteValue.Count != 0)
-                        if ((oldDeleteValueIndex.Count != 0 && oldDeleteValue.Count != 0))
+                    while (_oldDeleteValue.Count != 0)
+                        if ((_oldDeleteValueIndex.Count != 0 && _oldDeleteValue.Count != 0))
                         {
-                            listBoxName.Items.Insert(oldDeleteValueIndex[oldDeleteValueIndex.Count - 1], oldDeleteValue[oldDeleteValue.Count - 1]);
-                            //myFileName mfn = new myFileName();
-                            //mfn.currentFileName = oldDeleteValue[oldDeleteValue.Count - 1];
-                            //mfn.oldFileName = listFileNames[oldDeleteValueIndex[oldDeleteValueIndex.Count - 1]].oldFileName;
-                            //listFileNames.Insert(oldDeleteValueIndex[oldDeleteValueIndex.Count - 1], mfn);
-                            oldDeleteValueIndex.RemoveAt(oldDeleteValueIndex.Count - 1);
-                            oldDeleteValue.RemoveAt(oldDeleteValue.Count - 1);
+                            listBoxName.Items.Insert(_oldDeleteValueIndex[_oldDeleteValueIndex.Count - 1], _oldDeleteValue[_oldDeleteValue.Count - 1]);
+                            //FileName mfn = new FileName();
+                            //mfn.CurrentFileName = _oldDeleteValue[_oldDeleteValue.Count - 1];
+                            //mfn.OldFileName = listFileNames[_oldDeleteValueIndex[_oldDeleteValueIndex.Count - 1]].OldFileName;
+                            //listFileNames.Insert(_oldDeleteValueIndex[_oldDeleteValueIndex.Count - 1], mfn);
+                            _oldDeleteValueIndex.RemoveAt(_oldDeleteValueIndex.Count - 1);
+                            _oldDeleteValue.RemoveAt(_oldDeleteValue.Count - 1);
 
                         }
-                    listCleared = specCharsDeleted = isNumerated = isRemove = isDeleteNumeration = isRepeatAdd = false;
+                    listCleared = _specCharsDeleted = isNumerated = _isRemove = isDeleteNumeration = isRepeatAdd = false;
                 }
             }
             catch (Exception ex)
@@ -755,14 +866,14 @@ namespace AllNameToTxt
             }
         }
 
-        void autosave()
+        private void autosave()
         {
-            oldDeleteValue.Clear();
-            oldDeleteValueIndex.Clear();
+            _oldDeleteValue.Clear();
+            _oldDeleteValueIndex.Clear();
             for (int i = listBoxName.Items.Count - 1; i >= 0; i--)
             {
-                oldDeleteValue.Add(listBoxName.Items[i].ToString());
-                oldDeleteValueIndex.Add(i);
+                _oldDeleteValue.Add(listBoxName.Items[i].ToString());
+                _oldDeleteValueIndex.Add(i);
             }
         }
 
@@ -778,28 +889,32 @@ namespace AllNameToTxt
             deleteSpecSymb();
         }
 
-        bool specCharsDeleted = false;
-        //удаляет специальные символы из всех строк списка
+        private bool _specCharsDeleted = false;
+        /// <summary>
+        /// удаляет специальные символы из всех строк списка
+        /// </summary>
         void deleteSpecSymb()
         {
             autosave();
             string str = textBoxDeleteChars.Text;
             string s = "";
             char[] chars = new char[str.Length];
+
             for (int i = 0; i < str.Length; i++)
                 chars[i] = str[i];
 
             for (int i = 0; i < listBoxName.Items.Count; i++)
             {
                 s = listBoxName.Items[i].ToString();
+
                 while (s.IndexOfAny(chars) != -1)
                 {
                     s = s.Remove(s.IndexOfAny(chars), 1);
                     listBoxName.Items[i] = s;
-                    listFileNames[i].currentFileName = s;
+                    listFileNames[i].CurrentFileName = s;
                 }
             }
-            specCharsDeleted = true;
+            _specCharsDeleted = true;
         }
 
 
@@ -809,8 +924,7 @@ namespace AllNameToTxt
         }
 
         bool listCleared = false;
-        //очищает список
-        void clearList()
+        private void clearList()
         {
             autosave();
             listBoxName.Items.Clear();
@@ -823,18 +937,21 @@ namespace AllNameToTxt
         {
             numeration();
         }
+
         //для отмены нумерации
         bool isNumerated = false;
         //нумерует список
-        void numeration()
+        private void numeration()
         {
             autosave();
             string sep = numSeparator.Text;
+
             for (int i = 0; i < listBoxName.Items.Count; i++)
             {
                 //сначала просто нумеруем все пункты списка
                 listBoxName.Items[i] = (i + 1).ToString() + "$$$$" + sep + listBoxName.Items[i];
             }
+
             int idx = listBoxName.Items[listBoxName.Items.Count - 1].ToString().IndexOf("$$$$");
             //получаем количество цифр последнего числа нумерации списка
             int kol = listBoxName.Items[listBoxName.Items.Count - 1].ToString().Remove(idx).Length;
@@ -916,7 +1033,7 @@ namespace AllNameToTxt
             deleteNumeration();
         }
 
-        void deleteNumeration()
+        private void deleteNumeration()
         {
             autosave();
             char[] c = { '|' };
@@ -932,7 +1049,7 @@ namespace AllNameToTxt
         }
 
         //задает маску для удаления нумерации списка
-        void setMask()
+        private void setMask()
         {
             string[] mask = { "0.|0)|0-", "00.|00)|00-", "000.|000)|000-", "0000.|0000)|0000-" };
             foreach (string s in mask)
@@ -940,7 +1057,7 @@ namespace AllNameToTxt
             numMask.Text = numMask.Items[1].ToString();
         }
         //задает формат вывода времени для треков
-        void setTimeFormat()
+        private void setTimeFormat()
         {
             string[] format = { "mm:ss", "mm:ss:msms"};
             foreach (string s in format)
@@ -953,9 +1070,9 @@ namespace AllNameToTxt
             replaseSubs();
         }
 
-        bool isRemove = false;
+        private bool _isRemove = false;
         //заменяет одну подстроку на другую
-        void replaseSubs()
+        private void replaseSubs()
         {
             autosave();
             string s = "";
@@ -965,38 +1082,20 @@ namespace AllNameToTxt
                 s = s.Replace(subs1.Text, subs2.Text);
                 listBoxName.Items[i] = s;
             }
-            isRemove = true;
+            _isRemove = true;
         }
 
-        bool foldersNameInsert = false;
-
-        //добавляет имя папки в список
-        void addFoldersName()
-        {
-            string s = listTitle.Text;
-            if (s.IndexOf("#end") == -1)
-                listBoxName.Items.Insert(0, s + foldersName);
-            else
-            {
-                s = s.Replace("#end", "");
-                listBoxName.Items.Insert(0, foldersName + s);
-            }
-            myFileName mfn = new myFileName();
-            mfn.currentFileName = "#foldersName#";
-            mfn.oldFileName = "#foldersName#";
-            listFileNames.Add(mfn);
-            foldersNameInsert = true;
-        }
-
-        
+        private bool foldersNameInsert = false;
 
         private void toolStripMenuItem9_Click(object sender, EventArgs e)
         {
             myToUpper();
         }
 
-        //заменяет начальные буквы слов на те же в верхнем регистре
-        void myToUpper()
+        /// <summary>
+        /// заменяет начальные буквы слов на те же в верхнем регистре
+        /// </summary>
+        private void myToUpper()
         {
             string s = "";
             for (int i = 0; i < listBoxName.Items.Count; i++)
@@ -1008,11 +1107,14 @@ namespace AllNameToTxt
             }
         }
 
-        //заменяет все первые буквы слов в строке на верхний регистр 
-        string AllToUpRegister(string s)
+        /// <summary>
+        /// заменяет все первые буквы слов в строке на верхний регистр 
+        /// </summary>
+        private string AllToUpRegister(string s)
         {
             char[] sep = { ' ', '_', '.', '(', '-' };
             string[] str = s.Split(sep);
+
             for (int i = 0; i < str.Length; i++)
             {
                 if (str[i] != "")
@@ -1023,11 +1125,13 @@ namespace AllNameToTxt
                     str[i] = firstChar + other;
                 }
             }
-            string result = s.ToLower(); ;
+
+            string result = s.ToLower();
 
             foreach (string word in str)
             {
                 string w = word.ToLower();
+
                 if (word != "")
                     if (result.ToLower().IndexOf(w) != -1 && w.Length != 1)
                         result = result.Replace(w, word);
@@ -1040,8 +1144,8 @@ namespace AllNameToTxt
                     }
 
             }
-            return result;
 
+            return result;
         }
 
         private void сохранитьВИсходникиToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1049,34 +1153,40 @@ namespace AllNameToTxt
             saveToFirst();
         }
 
-        //сохраняет в исходники
-        void saveToFirst()
+        /// <summary>
+        /// сохраняет в исходники
+        /// </summary>
+        private void saveToFirst()
         {
             try
             {
 
                 for (int i = 0; i < listFileNames.Count; i++)
                 {
-                    if (listFileNames[i].currentFileName != listFileNames[i].oldFileName || listFileNames[i].currentFileName != "#foldersName#")
+                    if (listFileNames[i].CurrentFileName != listFileNames[i].OldFileName || listFileNames[i].CurrentFileName != "#_foldersName#")
                     {
-                        listFileNames[i].currentFileName = listBoxName.Items[i].ToString();
+                        listFileNames[i].CurrentFileName = listBoxName.Items[i].ToString();
                     }
                 }
-                foreach (myFileName mfn in listFileNames)
+
+                foreach (FileName mfn in listFileNames)
                 {
-                    FileInfo fi = new FileInfo(mfn.oldFileName);
-                    if (mfn.currentFileName != mfn.oldFileName || mfn.currentFileName != "#foldersName#")
+                    FileInfo fi = new FileInfo(mfn.OldFileName);
+
+                    if (mfn.CurrentFileName != mfn.OldFileName || mfn.CurrentFileName != "#_foldersName#")
                     {
-                        var audioFile = TagLib.File.Create(mfn.oldFileName);
+                        var audioFile = TagLib.File.Create(mfn.OldFileName);
                         char[] badChars = { '|', '\\', '/', ':', '*', '<', '>', '?', '\"' };
                         string file = "";
                         char[] sep = { '\\' };
-                        string[] words = mfn.oldFileName.Split(sep);
+                        string[] words = mfn.OldFileName.Split(sep);
+
                         foreach (char c in badChars)
                         {
-                            mfn.currentFileName.Replace(c, ' ');
+                            mfn.CurrentFileName.Replace(c, ' ');
                         }
-                        words[words.Length - 1] = mfn.currentFileName;
+                        words[words.Length - 1] = mfn.CurrentFileName;
+
                         for (int i = 0; i < words.Length; i++)
                         {
                             if (i != words.Length - 1)
@@ -1084,14 +1194,15 @@ namespace AllNameToTxt
                             else
                                 file += words[i];
                         }
-                        audioFile.Tag.Album = mfn.album;
+
+                        audioFile.Tag.Album = mfn.Album;
                         string[] sep2 = { ", " };
-                        audioFile.Tag.Performers = mfn.performer.Split(sep2, 10, StringSplitOptions.None);
-                        audioFile.Tag.Genres = mfn.genres.Split(sep2, 10, StringSplitOptions.None);
-                        audioFile.Tag.Title = mfn.title;
+                        audioFile.Tag.Performers = mfn.Performer.Split(sep2, 10, StringSplitOptions.None);
+                        audioFile.Tag.Genres = mfn.Genres.Split(sep2, 10, StringSplitOptions.None);
+                        audioFile.Tag.Title = mfn.Title;
                         audioFile.Save();
                         fi.MoveTo(file);
-                        mfn.oldFileName = file;
+                        mfn.OldFileName = file;
                     }
                 }
             }
@@ -1100,8 +1211,6 @@ namespace AllNameToTxt
                 MessageBox.Show(ex.Message + "\n" + ex.StackTrace);
             }
         }
-
-        
 
         private void toolsOformList_Click(object sender, EventArgs e)
         {
@@ -1119,18 +1228,15 @@ namespace AllNameToTxt
             else if (e.KeyCode == Keys.Escape)
             {
                 textBoxChange.ReadOnly = true;
+
                 for (int i = 0; i < menuStrip1.Items.Count - 1; i++)
                 {
                     menuStrip1.Items[i].Enabled = true;
                 }
+
                 panelCue.Visible = false;
                 listBoxName.Focus();
             }
-        }
-
-        private void textBoxChange_VisibleChanged(object sender, EventArgs e)
-        {
-            textBoxChange.Text = "";
         }
 
         private void редактироватьToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1138,11 +1244,11 @@ namespace AllNameToTxt
             chngeItem();
         }
 
-        bool changeItem = false;
-        int selectedIdx = 0;
+        private bool _changeItem = false;
+        private int _selectedIdx = 0;
         //редактирует пункт списка
         //использовать библиотеку  Taglib-sharp
-        void chngeItem()
+        private void chngeItem()
         {
             try
             {
@@ -1150,30 +1256,35 @@ namespace AllNameToTxt
                 {
                     menuStrip1.Items[i].Enabled = false;
                 }
-                selectedIdx = listBoxName.SelectedIndex;
+                _selectedIdx = listBoxName.SelectedIndex;
                 textBoxChange.ReadOnly = false;
+
                 if (listBoxName.SelectedIndex != -1)
                 {
                     textBoxChange.Text = listBoxName.Items[listBoxName.SelectedIndex].ToString();
                     panelCue.Visible = true;
 
-                        FileInfo fi = new FileInfo(listFileNames[listBoxName.SelectedIndex].currentFileName);
+                        FileInfo fi = new FileInfo(listFileNames[listBoxName.SelectedIndex].CurrentFileName);
                         if (!fi.Exists)
                         {
-                            var audioFile = TagLib.File.Create(listFileNames[listBoxName.SelectedIndex].oldFileName);
+                            var audioFile = TagLib.File.Create(listFileNames[listBoxName.SelectedIndex].OldFileName);
                             if (audioFile.Tag.Artists.Length != 0)
-                                textBoxPerformer.Text = String.Join(", ", audioFile.Tag.Artists);
+                                textBoxPerformer.Text = string.Join(", ", audioFile.Tag.Artists);
                             else
                                 textBoxPerformer.Text = getPerformer(textBoxChange.Text);
+
                             if (!audioFile.Tag.Title.Equals(""))
                                 textBoxTitle.Text = audioFile.Tag.Title;
                             else
                                 textBoxTitle.Text = getTitle(textBoxChange.Text);
+
                             if (audioFile.Tag.Genres.Length != 0)
-                                textBoxGenre.Text = String.Join(", ", audioFile.Tag.Genres);
+                                textBoxGenre.Text = string.Join(", ", audioFile.Tag.Genres);
                             else
                                 textBoxGenre.Text = "Hard";
+
                             textBoxTime.Text = "00:00:00";
+
                             if (!audioFile.Tag.Album.Equals(""))
                                 textBoxAlbum.Text = audioFile.Tag.Album;
                             else
@@ -1185,8 +1296,8 @@ namespace AllNameToTxt
                                 textBoxPerformer.Text = getPerformer(textBoxChange.Text);
                             else
                             {
-                                if (listFileNames[listBoxName.SelectedIndex].performer != "")
-                                    textBoxPerformer.Text = listFileNames[listBoxName.SelectedIndex].performer;
+                                if (listFileNames[listBoxName.SelectedIndex].Performer != "")
+                                    textBoxPerformer.Text = listFileNames[listBoxName.SelectedIndex].Performer;
                                 else
                                 {
                                     textBoxPerformer.Text = getPerformer(textBoxChange.Text);
@@ -1196,8 +1307,8 @@ namespace AllNameToTxt
                                 textBoxTitle.Text = getTitle(textBoxChange.Text);
                             else
                             {
-                                if (listFileNames[listBoxName.SelectedIndex].title != "")
-                                    textBoxTitle.Text = listFileNames[listBoxName.SelectedIndex].title;
+                                if (listFileNames[listBoxName.SelectedIndex].Title != "")
+                                    textBoxTitle.Text = listFileNames[listBoxName.SelectedIndex].Title;
                                 else
                                 {
                                     textBoxTitle.Text = getTitle(textBoxChange.Text);
@@ -1207,32 +1318,23 @@ namespace AllNameToTxt
                                 textBoxTime.Text = "00:00:00";
                             else
                             {
-                                if (listFileNames[listBoxName.SelectedIndex].time != "")
-                                    textBoxTime.Text = listFileNames[listBoxName.SelectedIndex].time;
+                                if (listFileNames[listBoxName.SelectedIndex].Time != "")
+                                    textBoxTime.Text = listFileNames[listBoxName.SelectedIndex].Time;
                                 else
                                 {
                                     textBoxTime.Text = "00:00:00";
                                 }
                             }
                         }
-                   
-                        
                 }
-                
 
                 textBoxChange.Focus();
-                changeItem = true;
+                _changeItem = true;
             }
             catch (Exception e)
             {
                 MessageBox.Show(e.Message + "\n" + e.StackTrace);
             }
-
-        }
-
-        private void listBoxName_Resize(object sender, EventArgs e)
-        {
-            //panelCue.Location = new Point(panelCue.Location.X, textBoxChange.Location.Y - panelCue.Height);
         }
 
         private void numMask_KeyPress(object sender, KeyPressEventArgs e)
@@ -1240,31 +1342,32 @@ namespace AllNameToTxt
             e.Handled = true;
         }
 
-        void test()
+        private void test()
         {
-            string filename = "";
             for (int i = 0; i < 9999; i++)
             {
-                filename = randomString(i) + ".txt";
+                var filename = randomstring(i) + ".txt";
                 FileInfo fi = new FileInfo("C:\\Users\\Николай\\Desktop\\" + "test\\" + filename);
                 StreamWriter sw = new StreamWriter(fi.FullName);
                 sw.Write(i.ToString());
                 sw.Close();
             }
         }
-        
-        string randomString(int j)
+
+        private string randomstring(int j)
         {
             string[] array = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "!", "-", "_", 
                              "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", 
                              "z", "x", "c", "v", "b", "n", "m", "~"};
             Random r = new Random();
             string s = "";
+
             for (int i = 0; i < 50; i++)
             {
                 s += array[r.Next(0, array.Length)];
             }
-            return s + j.ToString();
+
+            return s + j;
         }
 
         private void тестированиеНумерацииToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1278,17 +1381,17 @@ namespace AllNameToTxt
             setLB();
         }
 
-        void myCut()
+        private void myCut()
         {
             try
             {
                 if (listBoxName.SelectedIndex != -1 && !panelCue.Visible)
                 {
                     int index = listBoxName.SelectedIndex;
-                    oldDeleteValue.Add(listBoxName.Items[index].ToString());
-                    oldDeleteValueIndex.Add(index);
-                    myClipboard.currentFileName = listFileNames[index].currentFileName;
-                    myClipboard.oldFileName = listFileNames[index].oldFileName;
+                    _oldDeleteValue.Add(listBoxName.Items[index].ToString());
+                    _oldDeleteValueIndex.Add(index);
+                    _clipboard.CurrentFileName = listFileNames[index].CurrentFileName;
+                    _clipboard.OldFileName = listFileNames[index].OldFileName;
                     listBoxName.Items.RemoveAt(index);
                     listFileNames.RemoveAt(index);
                 }
@@ -1306,14 +1409,14 @@ namespace AllNameToTxt
             setLB();
         }
 
-        void myCopy()
+        private void myCopy()
         {
             try
             {
                 if (listBoxName.SelectedIndex != -1 && !panelCue.Visible)
                 {
-                    myClipboard.currentFileName = listFileNames[listBoxName.SelectedIndex].currentFileName;
-                    myClipboard.oldFileName = listFileNames[listBoxName.SelectedIndex].oldFileName;
+                    _clipboard.CurrentFileName = listFileNames[listBoxName.SelectedIndex].CurrentFileName;
+                    _clipboard.OldFileName = listFileNames[listBoxName.SelectedIndex].OldFileName;
                 }
             }
             catch (Exception e)
@@ -1328,22 +1431,22 @@ namespace AllNameToTxt
             setLB();
         }
 
-        void myInsert()
+        private void myInsert()
         {
             try 
             {
                 if (listBoxName.SelectedIndex != -1 && !panelCue.Visible)
                 {
-                    if (myClipboard.currentFileName != "" && myClipboard.oldFileName != "")
+                    if (_clipboard.CurrentFileName != "" && _clipboard.OldFileName != "")
                     {
                         int index = listBoxName.SelectedIndex;
-                        listBoxName.Items.Insert(index, myClipboard.currentFileName);
-                        myFileName mfn = new myFileName();
-                        mfn.currentFileName = myClipboard.currentFileName;
-                        mfn.oldFileName = myClipboard.oldFileName;
+                        listBoxName.Items.Insert(index, _clipboard.CurrentFileName);
+                        FileName mfn = new FileName();
+                        mfn.CurrentFileName = _clipboard.CurrentFileName;
+                        mfn.OldFileName = _clipboard.OldFileName;
                         listFileNames.Insert(index, mfn);
-                        //myClipboard.currentFileName = "";
-                        //myClipboard.oldFileName = "";
+                        //_clipboard.CurrentFileName = "";
+                        //_clipboard.OldFileName = "";
                     }
                 }
             }
@@ -1359,15 +1462,15 @@ namespace AllNameToTxt
             setLB();
         }
 
-        void myDelete()
+        private void myDelete()
         {
             try
             {
                 if (listBoxName.SelectedIndex != -1 && !panelCue.Visible)
                 {
                     int index = listBoxName.SelectedIndex;
-                    oldDeleteValue.Add(listBoxName.Items[index].ToString());
-                    oldDeleteValueIndex.Add(index);
+                    _oldDeleteValue.Add(listBoxName.Items[index].ToString());
+                    _oldDeleteValueIndex.Add(index);
                     listBoxName.Items.RemoveAt(index);
                     listFileNames.RemoveAt(index);
                 }
@@ -1381,25 +1484,26 @@ namespace AllNameToTxt
 
         private void программныйБуферОбменаToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Имя файла: " + myClipboard.currentFileName +"\n" + "Полное имя файла: " + myClipboard.oldFileName, "Программный буфер обмена");
+            MessageBox.Show("Имя файла: " + _clipboard.CurrentFileName +"\n" + "Полное имя файла: " + _clipboard.OldFileName, "Программный буфер обмена");
         }
 
         void setLB()
         {
             listBox1.Items.Clear();
-            foreach (myFileName mfn in listFileNames)
+            foreach (FileName mfn in listFileNames)
             {
-                listBox1.Items.Add(mfn.oldFileName);
+                listBox1.Items.Add(mfn.OldFileName);
             }
         }
+
         //для перетаскиваемых объектов
-        object objForDrop = new object();
+        private object _objForDrop = new object();
         private void listBoxName_DragEnter(object sender, DragEventArgs e)
         {
             e.Effect = DragDropEffects.All;
             string[] formats = e.Data.GetFormats();
             string type = e.Data.GetType().Name;
-            objForDrop = e.Data.GetData("FileDrop");//DataFormats.UnicodeText
+            _objForDrop = e.Data.GetData("FileDrop");//DataFormats.UnicodeText
             
         }
 
@@ -1408,9 +1512,9 @@ namespace AllNameToTxt
             try
             {
                 allFileNames = new List<string>();
-                for (int i = 0; i < ((string[])objForDrop).Length; i++)
+                for (int i = 0; i < ((string[])_objForDrop).Length; i++)
                 {
-                    getDir(((string[])objForDrop)[i]);
+                    getDir(((string[])_objForDrop)[i]);
                 }
                 foreach (string s in allFileNames)
                     addToList(s);
@@ -1443,35 +1547,27 @@ namespace AllNameToTxt
             
         }
 
-        void addToList(string path)
+        private void addToList(string path)
         {
-            myFileName mfn = new myFileName();
-            mfn.oldFileName = path;
-            string sfn = shortName(mfn.oldFileName);
+            FileName mfn = new FileName();
+            mfn.OldFileName = path;
+            string sfn = shortName(mfn.OldFileName);
             if (toolsOformList.Checked)
             {
                 listBoxName.Items.Add(begin.Text + sfn + end.Text);
-                mfn.currentFileName = begin.Text + sfn + end.Text;
-                defaultView.Add(begin.Text + sfn + end.Text);
+                mfn.CurrentFileName = begin.Text + sfn + end.Text;
+                _defaultView.Add(begin.Text + sfn + end.Text);
             }
             else
             {
                 listBoxName.Items.Add(sfn);
-                mfn.currentFileName = sfn;
-                defaultView.Add(sfn);
+                mfn.CurrentFileName = sfn;
+                _defaultView.Add(sfn);
             }
-            mfn.currentFileName = shortName(path);
+            mfn.CurrentFileName = shortName(path);
 
 
             listFileNames.Add(mfn);
-        }
-
-        private void listBoxName_DragOver(object sender, DragEventArgs e)
-        {
-            
-            //MessageBox.Show(obj.ToString());
-            //MessageBox.Show(e.Data.ToString());
-            //2 listBoxName.Items.Insert(listBoxName.SelectedIndex, listBoxName.Items[listBoxName.SelectedIndex]);
         }
 
         private void change_Click(object sender, EventArgs e)
@@ -1480,24 +1576,27 @@ namespace AllNameToTxt
         }
 
         //перетаскивание мышью
-        myFileName mouseDragItem = new myFileName();
-        //пункт, на который перетаскивают
-        myFileName mouseHoverItem = new myFileName();
-        bool isMouseDown = false;
-        int mouseDragIndex = -1;
-        //вырезание перетаскиваемого объекта
+        private FileName _mouseDragItem = new FileName();
+        private bool _isMouseDown = false;
+        private int _mouseDragIndex = -1;
+
+        /// <summary>
+        /// вырезание перетаскиваемого объекта
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void listBoxName_MouseDown(object sender, MouseEventArgs e)
         {
             try
             {
-                isMouseDown = true;
-                mouseDragIndex = listBoxName.SelectedIndex;
-                if (mouseDragIndex != -1)
+                _isMouseDown = true;
+                _mouseDragIndex = listBoxName.SelectedIndex;
+                if (_mouseDragIndex != -1)
                 {
-                    if (mouseDragIndex < listFileNames.Count)
+                    if (_mouseDragIndex < listFileNames.Count)
                     {
-                        mouseDragItem.currentFileName = listFileNames[mouseDragIndex].currentFileName;
-                        mouseDragItem.oldFileName = listFileNames[mouseDragIndex].oldFileName;
+                        _mouseDragItem.CurrentFileName = listFileNames[_mouseDragIndex].CurrentFileName;
+                        _mouseDragItem.OldFileName = listFileNames[_mouseDragIndex].OldFileName;
                     }
                 }
             }
@@ -1508,43 +1607,47 @@ namespace AllNameToTxt
 
         }
 
-        int oldMouseDragIndex = -2;
-        //вставка перетаскиваемого объекта
+        private int _oldMouseDragIndex = -2;
+        /// <summary>
+        /// вставка перетаскиваемого объекта
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void listBoxName_MouseUp(object sender, MouseEventArgs e)
         {
-            if (isMouseDown)
+            if (_isMouseDown)
             {
-                if (mouseDragIndex != -1)
+                if (_mouseDragIndex != -1)
                 {
-                    if (mouseDragItem.currentFileName != "" && mouseDragItem.oldFileName != "")
+                    if (_mouseDragItem.CurrentFileName != "" && _mouseDragItem.OldFileName != "")
                     {
-                        if (oldMouseDragIndex != mouseDragIndex)
+                        if (_oldMouseDragIndex != _mouseDragIndex)
                         {
                             
-                            listBoxName.Items.RemoveAt(oldMouseDragIndex);
-                            listFileNames.RemoveAt(oldMouseDragIndex);
-                            listBoxName.Items.Insert(mouseDragIndex, mouseDragItem.currentFileName);
-                            myFileName mfn = new myFileName();
-                            mfn.currentFileName = mouseDragItem.currentFileName;
-                            mfn.oldFileName = mouseDragItem.oldFileName;
-                            listFileNames.Insert(mouseDragIndex, mfn);
+                            listBoxName.Items.RemoveAt(_oldMouseDragIndex);
+                            listFileNames.RemoveAt(_oldMouseDragIndex);
+                            listBoxName.Items.Insert(_mouseDragIndex, _mouseDragItem.CurrentFileName);
+                            FileName mfn = new FileName();
+                            mfn.CurrentFileName = _mouseDragItem.CurrentFileName;
+                            mfn.OldFileName = _mouseDragItem.OldFileName;
+                            listFileNames.Insert(_mouseDragIndex, mfn);
                         }
                     }
-                    oldMouseDragIndex = mouseDragIndex;
+                    _oldMouseDragIndex = _mouseDragIndex;
                 }
-                isMouseDown = false;
+                _isMouseDown = false;
             }
             setLB();
         }
 
         private void listBoxName_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (isMouseDown)
+            if (_isMouseDown)
             {
-                oldMouseDragIndex = mouseDragIndex;
-                mouseDragIndex = listBoxName.SelectedIndex;
-                label1.Text = "oldMouseDragIndex = " + oldMouseDragIndex.ToString();
-                label2.Text = "mouseDragIndex = " + mouseDragIndex.ToString();
+                _oldMouseDragIndex = _mouseDragIndex;
+                _mouseDragIndex = listBoxName.SelectedIndex;
+                label1.Text = "_oldMouseDragIndex = " + _oldMouseDragIndex.ToString();
+                label2.Text = "_mouseDragIndex = " + _mouseDragIndex.ToString();
             }
         }
         private void toolStripMenuItem10_Click(object sender, EventArgs e)
@@ -1552,21 +1655,20 @@ namespace AllNameToTxt
             if (MessageBox.Show("Продолжить? Изменения сохранены не будут!", "Предупреждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 listBoxName.Items.Clear();
-                foreach (string s in defaultView)
+
+                foreach (string s in _defaultView)
                     listBoxName.Items.Add(s);
             }
-        }
-
-        private void File_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void buttonOK_Click(object sender, EventArgs e)
         {
             setAllFileAtributes();
         }
-        //задает все поля для файла
+
+        /// <summary>
+        /// задает все поля для файла
+        /// </summary>
         void setAllFileAtributes()
         {
             try
@@ -1575,12 +1677,12 @@ namespace AllNameToTxt
                 {
                     if (listBoxName.SelectedIndex != -1)
                     {
-                        listFileNames[listBoxName.SelectedIndex].performer = textBoxPerformer.Text;
-                        listFileNames[listBoxName.SelectedIndex].title = textBoxTitle.Text;
-                        listFileNames[listBoxName.SelectedIndex].album = textBoxAlbum.Text;
-                        listFileNames[listBoxName.SelectedIndex].time = textBoxTime.Text;
-                        listFileNames[listBoxName.SelectedIndex].genres = textBoxGenre.Text;
-                        listFileNames[listBoxName.SelectedIndex].currentFileName = textBoxChange.Text;
+                        listFileNames[listBoxName.SelectedIndex].Performer = textBoxPerformer.Text;
+                        listFileNames[listBoxName.SelectedIndex].Title = textBoxTitle.Text;
+                        listFileNames[listBoxName.SelectedIndex].Album = textBoxAlbum.Text;
+                        listFileNames[listBoxName.SelectedIndex].Time = textBoxTime.Text;
+                        listFileNames[listBoxName.SelectedIndex].Genres = textBoxGenre.Text;
+                        listFileNames[listBoxName.SelectedIndex].CurrentFileName = textBoxChange.Text;
                         listBoxName.Items[listBoxName.SelectedIndex] = textBoxChange.Text;
 
                         
@@ -1588,12 +1690,11 @@ namespace AllNameToTxt
                     else
                     {
                         listBoxName.Items.Add(textBoxChange.Text);
-                        //listFileNames.Add
-                        listFileNames[listBoxName.Items.Count - 1].performer = textBoxPerformer.Text;
-                        listFileNames[listBoxName.Items.Count - 1].title = textBoxTitle.Text;
-                        listFileNames[listBoxName.SelectedIndex].album = textBoxAlbum.Text;
-                        listFileNames[listBoxName.SelectedIndex].time = textBoxTime.Text;
-                        listFileNames[listBoxName.SelectedIndex].genres = textBoxGenre.Text;
+                        listFileNames[listBoxName.Items.Count - 1].Performer = textBoxPerformer.Text;
+                        listFileNames[listBoxName.Items.Count - 1].Title = textBoxTitle.Text;
+                        listFileNames[listBoxName.SelectedIndex].Album = textBoxAlbum.Text;
+                        listFileNames[listBoxName.SelectedIndex].Time = textBoxTime.Text;
+                        listFileNames[listBoxName.SelectedIndex].Genres = textBoxGenre.Text;
                     }
 
                     textBoxChange.ReadOnly = true;
@@ -1601,12 +1702,13 @@ namespace AllNameToTxt
                     {
                         menuStrip1.Items[i].Enabled = true;
                     }
+
                     panelCue.Visible = false;
                     labelToolTip.Visible = false;
                     listBoxName.Focus();
-                    if (listBoxName.SelectedIndex != -1)
-                        if (listBoxName.SelectedIndex + 1 < listBoxName.Items.Count)
-                            listBoxName.SelectedIndex++;
+
+                    if (listBoxName.SelectedIndex != -1 && listBoxName.SelectedIndex + 1 < listBoxName.Items.Count)
+                        listBoxName.SelectedIndex++;
                 }
                 else
                 {
@@ -1628,7 +1730,7 @@ namespace AllNameToTxt
                 listBoxName.Enabled = true;
         }
 
-        bool deleteKeyPressed = false;
+        private bool _deleteKeyPressed;
         private void textBoxPerformer_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
@@ -1646,6 +1748,7 @@ namespace AllNameToTxt
                     else if (((TextBox)sender).Name == "textBoxTime")
                     {
                         string s = ((TextBox)sender).Text;
+
                         if (isTimeOk(s))
                             setAllFileAtributes();
                         else
@@ -1654,23 +1757,21 @@ namespace AllNameToTxt
                             labelToolTip.Location = new Point(((TextBox)sender).Location.X, ((TextBox)sender).Location.Y + 20);
                             labelToolTip.Size = new Size(((TextBox)sender).Width, ((TextBox)sender).Height);
                             labelToolTip.Text = "Формат ввода времени \"00:00:00\"";
-
                         }
                     }
                 }
-                
             }
             if (e.KeyCode == Keys.Back)
             {
-                deleteKeyPressed = true;
+                _deleteKeyPressed = true;
             }
             else
             {
-                deleteKeyPressed = false;
+                _deleteKeyPressed = false;
             }
         }
 
-        bool isTimeOk(string s)
+        private bool isTimeOk(string s)
         {
             if (s.Length == 8)
             {
@@ -1683,17 +1784,20 @@ namespace AllNameToTxt
                         if (s.IndexOf(":") == -1)
                         {
                             int k = 0;
+
                             foreach (char c in s)
                             {
                                 if ("0123456789".IndexOf(c) != -1)
                                     k++;
                             }
+
                             if (k == s.Length)
                                 return true;
                         }
                     }
                 }
             }
+
             return false;
         }
 
@@ -1702,14 +1806,14 @@ namespace AllNameToTxt
             if (sender is TextBox)
             {
                 labelToolTip.Visible = true;
-                labelToolTip.Location = new Point(mouseX, mouseY);
+                labelToolTip.Location = new Point(_mouseX, _mouseY);
                 labelToolTip.Size = new Size(((TextBox)sender).Width, ((TextBox)sender).Height);
                 labelToolTip.Text = ((TextBox)sender).Text;
             }
             else if (sender is Label)
             {
                 labelToolTip.Visible = true;
-                labelToolTip.Location = new Point(mouseX, mouseY);
+                labelToolTip.Location = new Point(_mouseX, _mouseY);
                 labelToolTip.Size = new Size(((Label)sender).Width, ((Label)sender).Height);
                 labelToolTip.Text = ((Label)sender).Text;
             }
@@ -1719,6 +1823,7 @@ namespace AllNameToTxt
         {
             panelCue.Visible = false;
             textBoxChange.ReadOnly = true;
+
             for (int i = 0; i < menuStrip1.Items.Count - 1; i++)
             {
                 menuStrip1.Items[i].Enabled = true;
@@ -1727,8 +1832,8 @@ namespace AllNameToTxt
 
         private void panelCue_MouseMove(object sender, MouseEventArgs e)
         {
-            mouseX = e.X;
-            mouseY = e.Y;
+            _mouseX = e.X;
+            _mouseY = e.Y;
         }
 
         private void textBoxPerformer_MouseLeave(object sender, EventArgs e)
@@ -1741,11 +1846,6 @@ namespace AllNameToTxt
             {
                 labelToolTip.Visible = true;
             }
-        }
-
-        private void cueItem_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void panelCue_Enter(object sender, EventArgs e)
@@ -1761,31 +1861,33 @@ namespace AllNameToTxt
             myFileInfo();
         }
 
-        //показывает информацию о файле
-        //использовать библиотеку  Taglib-sharp
+        /// <summary>
+        /// показывает информацию о файле, использовать библиотеку  Taglib-sharp
+        /// </summary>
         void myFileInfo()
         {
             try
             {
                 if (listBoxName.SelectedIndex != -1)
                 {
-                    if (listFileNames[listBoxName.SelectedIndex].currentFileName != "")
+                    if (listFileNames[listBoxName.SelectedIndex].CurrentFileName != "")
                     {
-                        FileInfo fi = new FileInfo(listFileNames[listBoxName.SelectedIndex].currentFileName);
+                        FileInfo fi = new FileInfo(listFileNames[listBoxName.SelectedIndex].CurrentFileName);
+
                         if (!fi.Exists)
                         {
-                            var audioFile = TagLib.File.Create(listFileNames[listBoxName.SelectedIndex].oldFileName);
-                            MessageBox.Show(String.Format("Полное имя: {0}\nИсполнитель: {1}\nАльбом: {2}\nНаименование: {3}\nЖанр: {4}\nВремя начала: {5}\nТекущее имя: {6}",
-                                listFileNames[listBoxName.SelectedIndex].oldFileName, String.Join(", ", audioFile.Tag.Artists), audioFile.Tag.Album, audioFile.Tag.Title,
-                                String.Join(", ", audioFile.Tag.Genres), listFileNames[listBoxName.SelectedIndex].time, listFileNames[listBoxName.SelectedIndex].currentFileName));
+                            var audioFile = TagLib.File.Create(listFileNames[listBoxName.SelectedIndex].OldFileName);
+                            MessageBox.Show(string.Format("Полное имя: {0}\nИсполнитель: {1}\nАльбом: {2}\nНаименование: {3}\nЖанр: {4}\nВремя начала: {5}\nТекущее имя: {6}",
+                                listFileNames[listBoxName.SelectedIndex].OldFileName, string.Join(", ", audioFile.Tag.Artists), audioFile.Tag.Album, audioFile.Tag.Title,
+                                string.Join(", ", audioFile.Tag.Genres), listFileNames[listBoxName.SelectedIndex].Time, listFileNames[listBoxName.SelectedIndex].CurrentFileName));
                         }
                     }
                     else
                         MessageBox.Show("Полное имя: " + "\n" +
-                                        "Исполнитель: " + listFileNames[listBoxName.SelectedIndex].performer + "\n" +
-                                        "Наименование: " + listFileNames[listBoxName.SelectedIndex].title + "\n" +
-                                        "Время начала: " + listFileNames[listBoxName.SelectedIndex].time,
-                                        "Информация о файле \"" + listFileNames[listBoxName.SelectedIndex].currentFileName + "\"");
+                                        "Исполнитель: " + listFileNames[listBoxName.SelectedIndex].Performer + "\n" +
+                                        "Наименование: " + listFileNames[listBoxName.SelectedIndex].Title + "\n" +
+                                        "Время начала: " + listFileNames[listBoxName.SelectedIndex].Time,
+                                        "Информация о файле \"" + listFileNames[listBoxName.SelectedIndex].CurrentFileName + "\"");
                 }
                 else
                     MessageBox.Show("Выберите файл из списка.");
@@ -1828,34 +1930,27 @@ namespace AllNameToTxt
                 }
             }
         }
-        bool wasDeletePressed = false;
+
+        private bool _wasDeletePressed = false;
         private void textBoxTime_TextChanged(object sender, EventArgs e)
         {
-            if (!deleteKeyPressed)
+            if (!_deleteKeyPressed)
             {
                 if (textBoxTime.Text.Length == 2 || textBoxTime.Text.Length == 5)
                 {
                     textBoxTime.Text += ":";
-                    deleteKeyPressed = false;
+                    _deleteKeyPressed = false;
                 }
-                if (textBoxTime.Text.Length == 3 && textBoxTime.Text[2] != ':' && wasDeletePressed ||
-                    textBoxTime.Text.Length == 6 && textBoxTime.Text[5] != ':' && wasDeletePressed)
+                if (textBoxTime.Text.Length == 3 && textBoxTime.Text[2] != ':' && _wasDeletePressed ||
+                    textBoxTime.Text.Length == 6 && textBoxTime.Text[5] != ':' && _wasDeletePressed)
                 {
                     textBoxTime.Text = textBoxTime.Text.Substring(0, textBoxTime.Text.Length - 1) + ":" + textBoxTime.Text[textBoxTime.Text.Length - 1];
-                    wasDeletePressed = false; 
+                    _wasDeletePressed = false; 
                 }
             }
             else
-                wasDeletePressed = true;
+                _wasDeletePressed = true;
             textBoxTime.SelectionStart = textBoxTime.Text.Length;
-        }
-
-        private void textBoxPerformer_Click(object sender, EventArgs e)
-        {
-            if (sender is TextBox)
-            {
-                //((TextBox)sender).SelectAll();
-            }
         }
 
         private void textBoxTime_Click(object sender, EventArgs e)
@@ -1865,14 +1960,6 @@ namespace AllNameToTxt
                 ((TextBox)sender).SelectAll();
             }
         }
-
-        private void оПрограммеToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show(Text + " представляет собой редактор наименований файлов. \n" +
-                "Приложение предназначено для быстрого создания плейлистов и cue-файлов.\n"
-                , "О программе");
-        }
-
 
         private Word.Application ThisApplication = new Word.Application();
         private Word.Document doc = null;
@@ -1937,7 +2024,7 @@ namespace AllNameToTxt
                                             "<l><i>\"Вернуться к первоначальному виду\"</i> - отменяет все изменения пунктов списка и самого списка. Все удаленные пункты списка за время сеанса работы будут восстановлены. Максимальное количество хранимых записей равно 1000000.",
                                             "<l><i>\"Очистить список\"</i> (горячие клавиши Shift+Del) - очищает список.",
                                             "<l><b>Теги</b>",
-                                            "#time - применяется в полях <i>\"Добавить при заполнении списка в начало\"</i>, <i>\"Добавить при заполнении списка в конец\"</i>, находящихся во вкладке <i>\"Дополнительно\"</i>. При его наличии ко всем пунктам списка в начало или (и) конец будет добавлено время начала композиции. Формат времени указывается в пунтке <i>\"Настройки - Формат времени\"</i>.",
+                                            "#Time - применяется в полях <i>\"Добавить при заполнении списка в начало\"</i>, <i>\"Добавить при заполнении списка в конец\"</i>, находящихся во вкладке <i>\"Дополнительно\"</i>. При его наличии ко всем пунктам списка в начало или (и) конец будет добавлено время начала композиции. Формат времени указывается в пунтке <i>\"Настройки - Формат времени\"</i>.",
                                             "<b>Обновления:</b>",
                                             "<b>Сборка 3.8:</b> исправлено пропадание окна редактирования наименования пункта списка, исправлена загрузка cue-файла (теперь его имя будет отображаться в Дополнительно - Наименование списка, а не в начале списка), добавлены \"горячие клавиши\" на все виды сохранения.",
                                             "<b>Сборка 3.9:</b> исправлен поиск имя исполнителя и наименование трека",
@@ -1952,73 +2039,6 @@ namespace AllNameToTxt
                 m.downloadText(content);
                 m.Text = Text + " - " + m.Text;
                 m.Show();
-                //Microsoft.Office.Interop.Word.DocumentClass doc = new DocumentClass();
-                //Word.Document doc = (Word.Document)ThisApplication.Documents.Open(filename);
-                //string text = "";
-                //foreach (string s in content)
-                //{
-                //    doc.Content.Text += s;
-                //    text += s;
-                //}
-                //MessageBox.Show(text);
-                
-                
-                //doc.Close();
-                //doc.Content
-                //doc.Path = "";
-                //doc.Name = "Manual";
-                //doc.
-
-                //doc.Close();
-
-                // Create a new document based on a custom template(шаблона).
-                //Object template = @"C:\Test\MyTemplate.Dot";
-                //Object newTemplate = Type.Missing;
-                //Object documentType = Type.Missing;
-                //Object visible = Type.Missing; 
-                //ThisApplication.Documents.Add(ref template, ref newTemplate, ref documentType, ref visible);
-
-                //Object noPrompt = Type.Missing;
-                //Object originalFormat = Type.Missing;
-                //ThisApplication.Documents.Save(ref noPrompt, ref originalFormat);
-                //// or
-                //ThisApplication.ActiveDocument.Save();
-                //// or
-                //Object file1 = "MyNewDocument.doc";
-                //ThisApplication.Documents.get_Item(ref file1).Save();
-                ////подсчет символов в диапазоне
-                //Object start = Type.Missing;
-                //Object end = Type.Missing;
-
-                //Word.Range rng = ThisDocument.Range(ref start, ref end);
-                //rng.Select();
-                //MessageBox.Show("Characters: " +
-                //    ThisDocument.Characters.Count.ToString());
-                ////содержимое документа
-                //Word.Range rng2 = ThisDocument.Content;
-                ////get_Item можно использовать для поиска определенных объектов: параграфов, предложений 
-                //Word.Range rng3 = ThisDocument.Sentences[2];
-                //rng3.Select();
-                ////
-                //MessageBox.Show(String.Format("Start: {0}, End: {1}",
-                //    rng.Start, rng.End), "Range Start and End");
-                ////задать диапазон
-                //Word.Range rng5;
-                //Object start2 = 0;
-                //Object end2 = 7;
-                //rng = ThisDocument.Range(ref start2, ref end2);
-                //// Reset the existing Range.
-                //rng.SetRange(ThisDocument.Sentences[2].Start,
-                //    ThisDocument.Sentences[5].End);
-                //rng.Select();
-                //// Retrieve contents of first and second paragraphs
-                //string str1 = ThisDocument.Paragraphs[1].Range.Text;
-                //string str2 = ThisDocument.Paragraphs[2].Range.Text;
-                ////
-                //rng2.Text = "new content for paragraph 2.";
-                ////Word.Document doc = new Word.Document();
-                ////Word.Application word = new Word.Application();
-                ////doc.open 
             }
             catch (Exception ex)
             {
@@ -2029,11 +2049,6 @@ namespace AllNameToTxt
         private void leftTime_CheckedChanged(object sender, EventArgs e)
         {
             rebiuldTime();
-        }
-
-        private void openCueItem_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void toolStripMenuItem14_Click(object sender, EventArgs e)
@@ -2111,7 +2126,7 @@ namespace AllNameToTxt
             }
         }
 
-        private void toolStripMenuItem19_Click(object sender, EventArgs e)
+        private void toolStripMenuItem21_Click(object sender, EventArgs e)
         {
             try
             {
@@ -2159,13 +2174,12 @@ namespace AllNameToTxt
             copyList();
         }
 
-        void copyList()
+        private void copyList()
         {
             string s = "";
             foreach (string ss in listBoxName.Items)
                 s += ss + "\n";
             Clipboard.SetText(s);
         }
-
     }
 }
